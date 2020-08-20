@@ -1,12 +1,14 @@
-
+"""
+Code to establish patterns in land cover change
+"""
 import os
 import gdal
 import numpy as np
 
 # Directories
-fil_dir = r'C:\Users\clare\MscDiss\Images' #
+fil_dir = r'C:\Users\Clare\Documents\MscDiss\Images' #
 temp_fn = os.path.join(fil_dir, 'tmp')  # Temp files
-site_dir = 'WB'  # name of folder for current site
+site_dir = 'RW'  # name of folder for current site
 
 stack_ds = []
 # read in child_c files as numpy arrays and stack
@@ -28,13 +30,13 @@ def checkShapeSame(numpy_3d):
         shape.append(np.shape(i))
     return len(set(shape)) == 1
 
-
+"""
 if not checkShapeSame(stack_ds):
     print ("Rasters different sizes, ")
     exit()
 else:
     pass
-
+"""
 # create new file, same extent
 change_rast = np.zeros(np.shape(stack_ds[0]))
 
@@ -55,10 +57,11 @@ for row in range(num_rows-1):
             change_rast[row][cell] = 1
 
 # if water at somepoint then not - seasonally inundated.
+# high/low productivity vegetation
 
 
 driverTiff = gdal.GetDriverByName('GTiff')
-imgds = driverTiff.Create(r"C:\Users\clare\MscDiss\Images\6_Classified\WB_change.tif",
+imgds = driverTiff.Create(r"C:\Users\Clare\Documents\MscDiss\Images\6_Classified\RW_change.tif",
                           img.RasterXSize, img.RasterYSize,
                           1, gdal.GDT_Float32)
 imgds.SetGeoTransform(img.GetGeoTransform())
