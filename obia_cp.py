@@ -1,13 +1,19 @@
 """
-TODO: Add other statistics to RAT: proximity to water, area
-TODO: Empty the file location?
-TODO: Cleanup
-
+The following code iterates through all the clipped image files in the specified directory and:
+1. Stacks the Image
+2. Calculates band ratios
+3. Creates a dataset of all image layers standardised beteen 0 and 1
+4. Segments image into objects
+5. Calculates object statistics
+6. Creates Broad Image class
+7. Reads in, rasterises and conduces Random Forest classification using ground truth points
+    Code for this step adapted from https://opensourceoptions.com
+8. Subclassifies broad image class layer using RF outputs and hierarchical nomenclature.
 """
+
 import os
 import gdal
 import ogr
-import rios
 from rios import rat
 import numpy as np
 import rsgislib
@@ -15,25 +21,19 @@ from rsgislib import imageutils
 from rsgislib import rastergis
 from rsgislib.rastergis import ratutils
 from rsgislib.segmentation import segutils
-# import sklearn  # preprocessing/measure
-from sklearn import preprocessing
 from sklearn.ensemble import RandomForestClassifier
 from skimage import measure
 
 # ------------------------------------------------- #
 # Define File Names
 # Directories
-fil_dir = r'C:\Users\clare\MscDiss\Images' #
+fil_dir = r'C:\Users\Clare\Documents\MscDiss\Images' #
 temp_fn = os.path.join(fil_dir, 'tmp')  # Temp files
-site_dir = 'WB' # name of folder for current site
+site_dir = 'RW' # name of folder for current site
 
 # Input Files
 # training shape file
-train_fn = 'C:\\Users\\Clare\\MscDiss\\GT\\WB_gt_train.shp'
-
-# ------------------------------------------------- #
-# Image File stacking - create image stack of sentinel MT images
-# Str of image band file to be stacked
+train_fn = r'C:\Users\Clare\Documents\MscDiss\GT\RW_gt_train.shp'
 
 
 def fileStackBands(file_directory, site_directory, date):
@@ -133,6 +133,7 @@ def npStackRast(band_stack, directory, rast_fn, band_nm, ref_img):
     band_names.append('NDWIveg')
     band_names.append('SWIRratio')
     band_names.append('RVI')
+    band_names.append('NIRGreen')
     # print(band_names)
     imageutils.stackImageBands(bands, band_names, rast_fn, None, float(-9999.0), 'KEA', rsgislib.TYPE_32FLOAT)
 
@@ -141,26 +142,24 @@ def npStackRast(band_stack, directory, rast_fn, band_nm, ref_img):
         os.remove(str(directory + 'tempband_' + str(k) + '.kea'))
 
 
-# ------------------------------------------------- #
-# Iterate through dates and create temp_stack of them in 4_Stacked locaton
+# Image File stacking - create image stack of sentinel MT images
+# Iterate through dates and create temp_stack of them in 4_Stacked file location
+print("Creating image stack of clipped sentinel MT images...")
+
 sentBandNames = ['Band02', 'Band03', 'Band04', 'Band05',
                  'Band06', 'Band07', 'Band08', 'Band8A', 'Band11', 'Band12']
-"""
+
 for img_date_dir in os.listdir(os.path.join(fil_dir, '3_Clipped', site_dir)):
     # print (img_date_dir)
     imageutils.stackImageBands(fileStackBands(fil_dir, site_dir, img_date_dir), sentBandNames,
-                               os.path.join(fil_dir, '4_Stacked', site_dir, img_date_dir + '_stack_temp.tif'),
-                               None, 0, 'GTiff', rsgislib.TYPE_32FLOAT)
-"""
-# ------------------------------------------------- #
-# Create array of band information
+                               os.path.join(fil_dir, '4_Stacked', site_dir, img_date_dir + '_stack_temp.kea'),
+                               None, 0, 'KEA', rsgislib.TYPE_32FLOAT)
 
-# Read in GDAL file
+# Iterate through stacked images
 for stack_temp_dir in os.listdir(os.path.join(fil_dir, '4_Stacked', site_dir)):
     if stack_temp_dir.endswith('_stack_temp.kea'):
         stack_temp_ds = gdal.Open(os.path.join(fil_dir, '4_Stacked',
                                                site_dir, stack_temp_dir), gdal.GA_Update)  # as gdal array
-        # stack_arr = stack_temp_ds.ReadAsArray() # for numpy array
 
         # Output Files to be created
         stack_dir_fn = os.path.join(fil_dir, '4_Stacked', site_dir, stack_temp_dir[:-15])
@@ -169,35 +168,38 @@ for stack_temp_dir in os.listdir(os.path.join(fil_dir, '4_Stacked', site_dir)):
 
         segments_fn = os.path.join(fil_dir, '5_Segmented', site_dir, stack_temp_dir[:-15] + '_segments.kea')
         parent_fn = os.path.join(fil_dir, '6_Classified', site_dir, stack_temp_dir[:-15] + '_parent_c.tiff')
-        # rfveg_fn = os.path.join(fil_dir, '6_Classified', site_dir, stack_temp_dir[:-15] + '_rf_veg_c.tif')
         child_fn = os.path.join(fil_dir, '6_Classified', site_dir, stack_temp_dir[:-15] + '_child_c.tif')
 
+        # read in stacked images to numpy array
+        print('Calculating band ratios...')
         band_data = []
         for i in range(1, rasterShape(stack_temp_ds)[0] + 1):
             band = stack_temp_ds.GetRasterBand(i).ReadAsArray()
-            # print('band ' + str(i) + ' ' + str(band.max()) + ' ' + str(band.min()))
             band_data.append(band)
         # Calculate band ratios
         NDVIband = (band_data[6] - band_data[2]) / (band_data[6] + band_data[2])  # NDVI = (NIR – Red)/( NIR + Red)
         NDWIband = (band_data[1] - band_data[6]) / (band_data[1] + band_data[6])  # NDWI = (Green - NIR)/(Green + NIR)
         NDWIvegband = (band_data[6] - band_data[8]) / (band_data[6] + band_data[8])  # NDWI_veg ratio = (NIR/SWIR 1)
-        SWIRratio = band_data[8] / band_data[9]  # NDWI_veg ratio = (NIR/SWIR 1)
-        RVIband = (band_data[6] / band_data[2])  # RVI NIR / Red
+        SWIRratio = band_data[8] / band_data[9]  # SWIR ratio = (SWIR 1/SWIR 2)
+        RVIband = (band_data[6] / band_data[2]) # RVI NIR / Red
+        NIRGreen = (band_data[6] / band_data[1])  # Vegetation contrast ratio NIR / Green
+        # add to numpy array
         band_data.append(NDVIband)
         band_data.append(NDWIband)
         band_data.append(NDWIvegband)
         band_data.append(SWIRratio)
         band_data.append(RVIband)
+        band_data.append(NIRGreen)
 
         # Rescaling files between 0 and 1
         # Create standardised raster stack for segmentation algorithm
-        # look through bands in raster stack, rescale and add to array
         band_data_stan = []
         for i in range(1, rasterShape(stack_temp_ds)[0] + 1):
             band_s = stack_temp_ds.GetRasterBand(i).ReadAsArray()
             band_s = rescaler(band_s)
             # checknormalisation(band)
             band_data_stan.append(band_s)
+        # TODO: automate these lists!
         # band ratio rescale and append to band array
         NDVIband = rescaler(NDVIband)
         band_data_stan.append(NDVIband)
@@ -209,11 +211,14 @@ for stack_temp_dir in os.listdir(os.path.join(fil_dir, '4_Stacked', site_dir)):
         band_data_stan.append(SWIRratio)
         RVIband = rescaler(RVIband)
         band_data_stan.append(RVIband)
+        NIRGreen = rescaler(NIRGreen)
+        band_data_stan.append(NIRGreen)
 
         NDVIband = None
         NDWIband = None
         NDWIvegband = None
         SWIRratio = None
+        NIRGreen = None
         RVIband = None
         band = None
         band_s = None
@@ -237,7 +242,7 @@ for stack_temp_dir in os.listdir(os.path.join(fil_dir, '4_Stacked', site_dir)):
                                          noStretch=True,  # Issue when this is false
                                          noStats=True,  # Issue when this is false
                                          numClusters=60,
-                                         minPxls=25
+                                         minPxls=25,
                                          distThres=10,
                                          sampling=100, kmMaxIter=200)
         # ------------------------------------------------- #
@@ -253,13 +258,12 @@ for stack_temp_dir in os.listdir(os.path.join(fil_dir, '4_Stacked', site_dir)):
         # reading in RAT to add to
         segment_rat = gdal.Open(segments_fn, gdal.GA_Update)  # Read in segments raster as gdal
         segment_ds = segment_rat.GetRasterBand(1).GetDefaultRAT()  # Read in RAT
-        band = segment_rat.GetRasterBand(1).ReadAsArray()  # read in segment raster band, w seg ids
+        band = segment_rat.GetRasterBand(1).ReadAsArray()  # read in segment raster band, with seg ids
         band_data = np.dstack(band)
         segment_ids = np.unique(band)  # extract seg ids
 
         # ------------------------------------ #
         # create list of object stats, where each row is an object ro1[1] = [1,2,3,4,5]
-        # TODO: move above where parent class is
         obj_stats = []
         for i in range(1, int(segment_ds.GetRowCount())):
             row_stat = []
@@ -268,7 +272,6 @@ for stack_temp_dir in os.listdir(os.path.join(fil_dir, '4_Stacked', site_dir)):
                 row_stat.append(stat)
             obj_stats.append(row_stat)
         # ------------------------------------ #
-        #### fine until here
         # Geometry
         segment_ds.CreateColumn('obj_area', gdal.GFT_Integer, gdal.GFU_Generic)  # col 58
         segment_ds.CreateColumn('obj_width', gdal.GFT_Integer, gdal.GFU_Generic)  # col 59
@@ -280,46 +283,44 @@ for stack_temp_dir in os.listdir(os.path.join(fil_dir, '4_Stacked', site_dir)):
             segment_ds.SetValueAsInt(i, colcount-4, np.count_nonzero(band == i))  # no of pixels
             segment_ds.SetValueAsInt(i, colcount-3, int(max(np.count_nonzero(band == i, axis=1))))  # max width
             segment_ds.SetValueAsInt(i, colcount-2, int(max(np.count_nonzero(band == i, axis=0))))  # max length/height
-            segment_ds.SetValueAsInt(i, colcount-1, int(max(np.count_nonzero(band == i, axis=0))/max(np.count_nonzero(band == i, axis=1))*100)) # length/width ratio
+            segment_ds.SetValueAsInt(i, colcount-1,
+                                     int(max(np.count_nonzero(band == i, axis=0))/max(np.count_nonzero(band == i, axis=1))*100))  # length/width ratio
 
         # ------------------------------------------------- #
         # Hierarchical Classification
-        # Reading in segment RAT
-
         print("Hierarchical Classification...")
 
+        # Reading in segment RAT
         NDWIAvg = rat.readColumn(segment_rat, "NDWIAvg")
         SWIRratioAvg = rat.readColumn(segment_rat, "SWIRratioAvg")
-        NDVIAvg = rat.readColumn(segment_rat, "NDVIAvg")
-        NDVIAvg = rat.readColumn(segment_rat, "NDVIAvg")
         RVIAvg = rat.readColumn(segment_rat, "RVIAvg")
 
-        # Creating and population parent class column
+        # Creating and population parent class column based on rules
         segment_ds.CreateColumn('p_class', gdal.GFT_Integer, gdal.GFU_Generic)
         for i in range(int(segment_ds.GetRowCount())):  # iterate down rows for number of rows in input stack
             if segment_ds.GetValueAsInt(i, (segment_ds.GetColumnCount()-1)) == 0:  # if no class (0) in p_class column
-                if NDWIAvg[i] > 0.6 == True:  # if NDWIAvg > 0.6 then
-                    segment_ds.SetValueAsInt(i, (segment_ds.GetColumnCount()-1), 1)  # water,
-                elif SWIRratioAvg[i] < 1.6:  # if Band12Max (col 42) > 0.25 then
+                if NDWIAvg[i] > 0.6:  
+                    segment_ds.SetValueAsInt(i, (segment_ds.GetColumnCount()-1), 1)  # water
+                elif SWIRratioAvg[i] < 0.4:
                     segment_ds.SetValueAsInt(i, (segment_ds.GetColumnCount()-1), 2)  # rock
-                elif NDVIAvg[i] < 0.55:  # if NDVIAvg (col 47) > 0.25 then
-                    segment_ds.SetValueAsInt(i, (segment_ds.GetColumnCount()-1), 3)  # wetlands
+                elif RVIAvg[i] < 0.35:
+                    segment_ds.SetValueAsInt(i, (segment_ds.GetColumnCount()-1), 3)  # low productivity veg
                 else:
-                    segment_ds.SetValueAsInt(i, (segment_ds.GetColumnCount()-1), 4)  # vegetation
+                    segment_ds.SetValueAsInt(i, (segment_ds.GetColumnCount()-1), 4)  # high productivity veg
 
         # Creating raster of parent class
         parent_class = rat.readColumn(segment_rat, "p_class")  # extract parent class ids for each object
-        parent_class = np.delete(parent_class, 0)  # had to as segment 0 wasnt anything
+        parent_class = np.delete(parent_class, 0)  # Remove empty segment 0
+        pclass_ds = np.copy(band)  # create copy of raster of objects
 
-        pclass_ds = np.copy(band)
-        for seg_id, klass in zip(segment_ids, parent_class):  # dictionary that links segment ids to predicted values
+        for seg_id, klass in zip(segment_ids, parent_class):  # dictionary that links segment ids to parent class
             pclass_ds[pclass_ds == seg_id] = klass # create np array, using dictionary to link segments to p class
         rasteriseOutput(stack_temp_ds, parent_fn, pclass_ds, 'GTiff')
-        print("Parent Class Complete...")
-        # ------------------------------------------------- #
-        # rasterising shapefile ground truth data points
-        # read in training dataset
 
+        print("Broad Classification Complete...")
+        # ------------------------------------------------- #
+        # rasterising shapefile of ground truth data points
+        # read in training dataset
         train_ds = ogr.Open(train_fn)
         lyr = train_ds.GetLayer()
 
@@ -329,25 +330,20 @@ for stack_temp_dir in os.listdir(os.path.join(fil_dir, '4_Stacked', site_dir)):
                                   gdal.GDT_UInt16)  # name, x,y,band no, format
         target_ds.SetGeoTransform(stack_temp_ds.GetGeoTransform())
         target_ds.SetProjection(stack_temp_ds.GetProjection())
-        # TODO: functionise this, incorp with rastOutput func
 
         # rasterise
         options = ['ATTRIBUTE=Id']
         gdal.RasterizeLayer(target_ds, [1], lyr, options=options)  # where saving to, band, input vector
-        # retrieve the rasterised data and print basic stats
-        data = target_ds.GetRasterBand(1).ReadAsArray()
-        print('min', data.min(), 'max', data.max(), 'mean', data.mean())
+        data = target_ds.GetRasterBand(1).ReadAsArray()  # retrieve the rasterised data
         # --------------------------------#
         # Assigning land cover types for  ground truth points
-
-        # 2d array containg number 1-3 for land cover classes
+        # 2d array containing number 1-3 for land cover classes
         ground_truth = target_ds.GetRasterBand(1).ReadAsArray()
         classes = np.unique(ground_truth)[1:]
         print('class values', classes)
 
         segments_per_class = {}  # set of sets
 
-        ##############
         for klass in classes:
             # find out which segments belong in each one of classes
             segments_of_class = band[ground_truth == klass]  # which segments correspond to each land cover type
@@ -362,14 +358,13 @@ for stack_temp_dir in os.listdir(os.path.join(fil_dir, '4_Stacked', site_dir)):
 
         for class_segments in segments_per_class.values():
             intersection |= accum.intersection(
-                class_segments)  # if anything in accum overlaps with class_segemnts, add to intersection
+                class_segments)  # if anything in accum overlaps with class_segments, add to intersection
             accum |= class_segments
             # we want intersection to be 0, showing there are no class intersections
         assert len(intersection) == 0, "Segments(s) represent multiple classes"
         # ------------------------------------#
         # Training classification algorithm
-
-        print('Training child classification algorithm...')
+        print('Training RF classification algorithm...')
         train_img = np.copy(band)  # np array copy
         threshold = train_img.max() + 1  # greater than max of segments
 
@@ -402,23 +397,48 @@ for stack_temp_dir in os.listdir(os.path.join(fil_dir, '4_Stacked', site_dir)):
             # train objects should be equal to training segments
 
         classifier = RandomForestClassifier(n_jobs=-1)
-        classifier.fit(training_objects, training_labels)
         print('Fitting Random Forest Classifier')
-        predicted = classifier.predict(obj_stats)  # given list of labels for each segments
+        classifier.fit(training_objects, training_labels)
         print('Predicting Classifications')
-
+        predicted = classifier.predict(obj_stats)  # given list of labels for each segments
 
 
         # Creating child class
+        print('Creating detailed classification layer...')
         clf = np.copy(band)
         # for each segment we want to list segment Id with reducted values
         for segment_id, klass in zip(segment_ids, predicted):  # dictionary that links segment ids to predicted values
             clf[clf == segment_id] = klass
         clf = clf.astype(np.float32)
 
+        # read in parent class file
         parent_ds = gdal.Open(parent_fn, gdal.GA_Update)
         parent_arr = parent_ds.GetRasterBand(1).ReadAsArray()
-        water_mask = parent_arr < 1.5
+
+        # classify vegetation objects
+        if (clf.shape == parent_arr.shape) : pass
+        else: print("Broad and specific classess different shapes")
+
+        num_rows, num_cols = parent_arr.shape
+        # Pixel Iteration
+        for row in range(num_rows):
+            for cell in range(num_cols):
+                cell_list = []
+                cell_list.append(parent_arr[row][cell])
+                cell_list.append(clf[row][cell])
+                if cell_list[0] == 1:pass  # if water parent class, pass
+                elif cell_list[0] == 2: pass  # if bare ground parent class, pass
+                elif cell_list[0] == 3:  # if low productivity veg parent class
+                    for i in [1, 2, 3]:  # iterate through bog (1), forest (2) and grass (3)
+                        if cell_list[1] == i:
+                            clf[row][cell] = 7 + i
+                elif cell_list[0] == 4: # if low productivity veg parent class
+                    for i in [1, 2, 3]:  # iterate through bog (1), forest (2) and grass (3)
+                        if cell_list[1] == i:
+                            clf[row][cell] = 10 + i
+
+        # classify water objects
+        water_mask = parent_arr < 1.5  # create a true false mask where everything 2 or above is false, and 1 is true
         water_obj = water_mask.astype(int)  # binary array where 1 is water and 0 is not
         water_obj = measure.label(water_obj)  # label all separate water objects with dif vals
 
