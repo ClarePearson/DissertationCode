@@ -1,61 +1,44 @@
+"""
+Preprocessing to OBIA methods
+Each of three sections must be run in the following sequence:
+1. Image reprojection
+2. Creation of text file for batch processing of QGIS Semi-Automatic Classifictaion plugin (SCP)
+    Dark Object Subtraction (DOS)
+3. Run batch text file in QGIS
+4. Clip files to extent of ramsar shapefile
+"""
+
 import os
 import rasterio
-from rasterio.merge import merge
-from rasterio.mask import mask
-import gdal
-import ogr
-import earthpy
 from earthpy import spatial
 import geopandas as gpd
-import numpy as np
-from rasterio.plot import plotting_extent
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 
-# input files
-ramsarshp_fn = "C:\\Users\\clare\\MscDiss\\RAMSARsites\\Broadlands.shp"  # Shapefile of area taken from RASMAR all shapefile
-flowacc_fn = "C:\\Users\\clare\\MscDiss\\DEM\\OS Terrain 50m\\flowacc.tif"
+# TODO: automate with RW/MT/WB
+# Input files for reprojection
+bng = 'EPSG:27700' # British NAtional Gris Projection code
+raw_img_dir = r"C:\Users\Clare\Documents\MscDiss\Images\0_RAW\RW"  # File directory for raw images
+reproj_img_dir = r"C:\Users\Clare\Documents\MscDiss\Images\1_Reprojected\RW"  # File directory for reprojected images
 
-# to be created
-clipout_fn = "C:\\Users\\clare\\MscDiss\\Hydrology\\WBpourpoint.tif"  # output of flow acc clipping to ramsarshp_fn
+# Input files for SCP DOS batch text file creation
+images_dir = r"C:\Users\Clare\Documents\MscDiss\Images"
+dos_img_dir = r"C:\Users\Clare\Documents\MscDiss\Images\2_DOS\RW"
+batch_txt_fn = r"C:\Users\Clare\Documents\MscDiss\Images\repro_DOS.txt"
 
-# TODO: add exceptions for where file directories and files already exist
-# --------------------- #
-# clipping flow accumulation raster
-ramsar = gpd.read_file(ramsarshp_fn)
-# clip flow acc by shapefile
-with rasterio.open(flowacc_fn) as src_raster:
-    cropped_raster, cropped_meta = spatial.crop_image(src_raster, ramsar)
+# Input files for clipping images to RAMSAR site extent
+clipped_img_dir = r"C:\Users\Clare\Documents\MscDiss\Images\3_Clipped\RW"
+# Shapefile of area taken from RASMAR all shapefile
+ramsarshp_fn = "C:\\Users\\Clare\\Documents\\MscDiss\\RAMSARsites\\Rutlands.shp"
 
-crop_affine = cropped_meta["transform"]
-# Create spatial plotting extent for the cropped layer
-chm_extent = plotting_extent(cropped_raster[0], crop_affine)
-cropped_meta.update({'transform': crop_affine,
-                       'height': cropped_raster.shape[1],
-                       'width': cropped_raster.shape[2],
-                       'nodata': -999.99})
-# write tif file of clipped bit
-with rasterio.open(clipout_fn, 'w', **cropped_meta) as ff:
-    ff.write(cropped_raster[0], 1)
 
-# create copy of flow accumulation raster but values are 0
-"""
-flowacc_ds = gdal.Open(flowacc_fn)
-format = "GTiff"
-driver = gdal.GetDriverByName( format )
-dst_ds = driver.CreateCopy(blankflowacc_fn, flowacc_ds, 0 )
-
-# append clipped raster to blank flowacc raster
-import sys
-sys.path.insert(0, r"C:\\Users\\clare\\anaconda3\\envs\\dissertation\\Lib\\site-packages\\GDAL-3.0.2-py3.7-win-amd64.egg-info\\scripts")
-import gdal_merge
-sys.argv = ['','-o',pourpoint_fn,blankflowacc_fn, clipout_fn]
-gdal_merge.main()
-"""
-
-# --------------------- #
-# reproject image rasters to british national grid
 def reproject_et(inpath, outpath, new_crs):
-    dst_crs = new_crs # CRS for web meractor
+    """
+    reprojects created reprojected output image from input inputted image
+    :param inpath: String, file path of input image to be reprojected
+    :param outpath: String, file path of output image to be created
+    :param new_crs: String, Projection system to be reprojected to
+    """
+    dst_crs = new_crs  # CRS for web meractor
 
     with rasterio.open(inpath) as src:
         transform, width, height = calculate_default_transform(
@@ -79,11 +62,9 @@ def reproject_et(inpath, outpath, new_crs):
                     dst_crs=dst_crs,
                     resampling=Resampling.nearest)
 
-
-bng = 'EPSG:27700'
-raw_img_dir = r"C:\Users\clare\MscDiss\Images\0_RAW\WB"
-reproj_img_dir = r"C:\Users\clare\MscDiss\Images\1_Reprojected\WB"
-
+# -------------- #
+# Reprojection
+# Iterate through raw data files and reproject selected image bands
 for image_dir in os.listdir(raw_img_dir):
     # print (image_dir)
     path = os.path.join(reproj_img_dir, image_dir[-15:-7])
@@ -100,24 +81,18 @@ for image_dir in os.listdir(raw_img_dir):
 
 
 # -------------- #
-# crete text file for batch
-images_dir = r"C:\Users\clare\MscDiss\Images"
-dos_img_dir = r"C:\Users\clare\MscDiss\Images\2_DOS\WB"
-reproj_img_dir = r"C:\Users\clare\MscDiss\Images\1_Reprojected\WB"
-
-batch_txt_fn = r"C:\Users\clare\MscDiss\Images\repro_DOS.txt"
+# Create text file for SCP DOS batch
 f=open(batch_txt_fn, "a+")
-
 for folder in os.listdir(reproj_img_dir):
     print(os.path.join(reproj_img_dir, folder))
     # print(os.path.join(reproj_img_dir, folder, 'MTD_TL.xml'))
-    print(os.path.join(images_dir,'2_DOS','MT', folder))
+    print(os.path.join(images_dir,'2_DOS','RW', folder))
     try:
-        # os.mkdir(os.path.join(images_dir,'2_DOS','WB', folder))
+        # os.mkdir(os.path.join(images_dir,'2_DOS','RT', folder))
         text = str("sentinel2_conversion;input_dir : '"+ os.path.join(reproj_img_dir, folder)
                    + "';mtd_safl1c_file_path : '" + os.path.join(reproj_img_dir, folder, 'MTD_TL.xml')
                    +"';apply_dos1 : 1;dos1_only_blue_green : 0;use_nodata : 0;nodata_value : 0;create_bandset : 0;output_dir : '"
-                   + os.path.join(images_dir,'2_DOS','WB', folder) + "';band_set : 0"+"\n")
+                   + os.path.join(images_dir,'2_DOS','RW', folder) + "';band_set : 0"+"\n")
         f.write(text)
     except:
         pass
@@ -126,11 +101,7 @@ f.close()
 
 # -------------- #
 # clip files by polygon
-clipped_img_dir = r"C:\Users\clare\MscDiss\Images\3_Clipped\WB"
-basinpoly_fn = r"C:\Users\clare\MscDiss\Malham\upslope\mt_basin.shp"  # shapefile of polygonised basin from r.water.source
-
 ramsar = gpd.read_file(ramsarshp_fn )
-
 for image_dir in os.listdir(dos_img_dir):
     # print(image_dir)
     path = os.path.join(clipped_img_dir, image_dir)
@@ -152,35 +123,3 @@ for image_dir in os.listdir(dos_img_dir):
                 ff.write(cropped_raster[0], 1)
     except:pass
 
-
-# --------------------- #
-# Merging all the dem tiles
-"""
-directory = 'C:\\Users\\clare\\MscDiss\\DEM\\OS Terrain 50m\\terrain-50-dtm_3581326'
-
-os.listdir(directory)
-dem_list = []
-for folder in os.listdir(directory):
-    for file in os.listdir(str(directory) + '\\' + str(folder)):
-        if file.endswith(".asc"):
-            dem_list.append(str(directory) + '\\' + str(folder) + '\\' + str(file))
-        else:
-            continue
-dem_ds = []
-for fp in dem_list:
-    src = rasterio.open(fp)
-    dem_ds.append(src)
-
-mosaic, out_trans = merge(dem_ds)
-out_meta = src.meta.copy()
-out_meta.update({"driver": "GTiff",
-                 "height": mosaic.shape[1],
-                 "width": mosaic.shape[2],
-                 "transform": out_trans,
-                 "crs": "+proj=utm +zone=35 +ellps=GRS80 +units=m +no_defs "
-                 }
-                )
-out_fp = r"C:\\Users\\clare\\MscDiss\\DEM\\OS Terrain 50m\\ukDEM.tif"
-with rasterio.open(out_fp, "w", **out_meta) as dest:
-    dest.write(mosaic)
-"""
