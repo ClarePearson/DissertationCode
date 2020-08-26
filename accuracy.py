@@ -94,16 +94,15 @@ for child_img_dir in os.listdir(os.path.join(fil_dir, 'Images', '6_Classified', 
         field_nm = (child_img_dir[:-12]+'_l')  # get field column name for relevant img date
         options = ['ATTRIBUTE='+field_nm]
         print(child_img_dir[:-12])
-        # read in checked ground truth points raster
+        # read in checked ground truth points raster, for the relevant dat field
         gdal.RasterizeLayer(target_ds, [1], lyr, options=options)
         truth = target_ds.GetRasterBand(1).ReadAsArray()
 
-        # read in child class
+        # read in relevant child class and extract values at sample point locations
         child_class = gdal.Open(os.path.join(fil_dir, 'Images', '6_Classified',
                                              site_dir, child_img_dir), gdal.GA_Update)
         child_ds = child_class.ReadAsArray()
         pred = np.copy(truth)
-
         idx = np.nonzero(truth)  # find np array indices where truth does not equal zero
         pred[idx] = child_ds[idx]  # pred is equal to the child class where the sample points are
 
