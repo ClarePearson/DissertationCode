@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue May 26 13:18:14 2020
 @author: Clare
@@ -88,6 +87,9 @@ target_ds = driver.Create('', img_ref.RasterXSize, img_ref.RasterYSize, 1, gdal.
 target_ds.SetGeoTransform(img_ref.GetGeoTransform())
 target_ds.SetProjection(img_ref.GetProjection())
 
+total_pred = []
+total_truth = []
+
 # iterate through each of the child class tifs in the relevant site directory
 for child_img_dir in os.listdir(os.path.join(fil_dir, 'Images', '6_Classified', site_dir)):
     if child_img_dir.endswith('child_c.tif'):
@@ -105,9 +107,15 @@ for child_img_dir in os.listdir(os.path.join(fil_dir, 'Images', '6_Classified', 
         pred = np.copy(truth)
         idx = np.nonzero(truth)  # find np array indices where truth does not equal zero
         pred[idx] = child_ds[idx]  # pred is equal to the child class where the sample points are
-
         # confusion matrix of predicted vs ground truthed sample pixels, create csv
+        total_truth.extend(truth[idx])
+        total_pred.extend(pred[idx])
         cm = metrics.confusion_matrix(truth[idx], pred[idx])
         ct_df = pd.crosstab(truth[idx], pred[idx], rownames=['True'], colnames=['Predicted'], margins=True)
         ct_df.to_csv(os.path.join(r'C:\Users\Clare\Documents\1. University\6. MSc GIS\7. Dissertation\4. Figures',
                                   site_dir+child_img_dir[:-12]+'.csv'))
+
+        # Calculate kappa score
+        print(metrics.cohen_kappa_score(truth[idx], pred[idx]))
+print(metrics.cohen_kappa_score(total_truth, total_pred))
+
