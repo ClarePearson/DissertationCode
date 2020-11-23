@@ -7,7 +7,6 @@ Each of three sections must be run in the following sequence:
 3. Run batch text file in QGIS
 4. Clip files to extent of ramsar shapefile
 """
-
 import os
 import rasterio
 from earthpy import spatial
@@ -16,7 +15,7 @@ from rasterio.warp import calculate_default_transform, reproject, Resampling
 
 # TODO: automate with RW/MT/WB
 # Input files for reprojection
-bng = 'EPSG:27700' # British NAtional Gris Projection code
+bng = 'EPSG:27700' # British National Gris Projection code
 raw_img_dir = r"C:\Users\Clare\Documents\MscDiss\Images\0_RAW\RW"  # File directory for raw images
 reproj_img_dir = r"C:\Users\Clare\Documents\MscDiss\Images\1_Reprojected\RW"  # File directory for reprojected images
 
@@ -26,9 +25,9 @@ dos_img_dir = r"C:\Users\Clare\Documents\MscDiss\Images\2_DOS\RW"
 batch_txt_fn = r"C:\Users\Clare\Documents\MscDiss\Images\repro_DOS.txt"
 
 # Input files for clipping images to RAMSAR site extent
-clipped_img_dir = r"C:\Users\Clare\Documents\MscDiss\Images\3_Clipped\RW"
+clipped_img_dir = r"C:\Users\Clare\Documents\MscDiss\Images\3_Clipped"
 # Shapefile of area taken from RASMAR all shapefile
-ramsarshp_fn = "C:\\Users\\Clare\\Documents\\MscDiss\\RAMSARsites\\Rutlands.shp"
+ramsarshp_fn = "C:\\Users\\Clare\\Documents\\MscDiss\\RAMSARsites\\Malham.shp"
 
 
 def reproject_et(inpath, outpath, new_crs):
@@ -38,7 +37,7 @@ def reproject_et(inpath, outpath, new_crs):
     :param outpath: String, file path of output image to be created
     :param new_crs: String, Projection system to be reprojected to
     """
-    dst_crs = new_crs  # CRS for web meractor
+    dst_crs = new_crs  # CRS for web Mercator
 
     with rasterio.open(inpath) as src:
         transform, width, height = calculate_default_transform(
@@ -110,7 +109,7 @@ for image_dir in os.listdir(dos_img_dir):
         for image_band in os.listdir(dos_img_dir + '\\' + image_dir):
             # print(os.path.join(path, image_band))
             # clip flow acc by shapefile
-            with rasterio.open(os.path.join(dos_img_dir, image_dir, image_band)) as src_raster:
+            with rasterio.open(r'C:\Users\Clare\Documents\MscDiss\Images\6_Classified\MT_seasonal_2.tif') as src_raster:
                 cropped_raster, cropped_meta = spatial.crop_image(src_raster, ramsar)
 
             crop_affine = cropped_meta["transform"]
@@ -122,4 +121,3 @@ for image_dir in os.listdir(dos_img_dir):
             with rasterio.open(os.path.join(path, image_band), 'w', **cropped_meta) as ff:
                 ff.write(cropped_raster[0], 1)
     except:pass
-
