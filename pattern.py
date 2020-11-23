@@ -51,16 +51,7 @@ for stack_temp_dir in os.listdir(os.path.join(fil_dir, '6_Classified', site_dir)
                                                site_dir, stack_temp_dir), gdal.GA_Update)  # as gdal array
         stack_ds.append(img.ReadAsArray())  # for numpy array
         print(np.unique(img.ReadAsArray(), return_counts=True))
-"""
-if site_dir == 'MT':
-    for i in range(len(stack_ds)):
-        stack_ds[i][stack_ds[i] == 9] = 19
-        stack_ds[i][stack_ds[i] == 12] = 22
-        stack_ds[i][stack_ds[i] == 8] = 9
-        stack_ds[i][stack_ds[i] == 11] = 12
-        stack_ds[i][stack_ds[i] == 22] = 11
-        stack_ds[i][stack_ds[i] == 19] = 8
-"""
+
 """
 if not checkShapeSame(stack_ds):
     print ("Rasters different sizes, ")
@@ -140,3 +131,9 @@ for row in range(num_rows-1):
 rasterise_layer(fil_dir, site_dir, img, change_rast, '_change.tif')
 rasterise_layer(fil_dir, site_dir, img, change_count, '_changecount.tif')
 rasterise_layer(fil_dir, site_dir, img, seasonal, '_seasonal.tif')
+
+# read in and get land copt type statistics
+img = gdal.Open(os.path.join(fil_dir, '6_Classified', site_dir + '_seasonal.tif'))
+trend_img = img.ReadAsArray()
+print(np.unique(trend_img, return_counts=True))
+
