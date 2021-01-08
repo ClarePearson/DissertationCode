@@ -5,10 +5,13 @@ The python scripts in this directory we're writted for my MSc in GIS at the Univ
 *"Assessing hierarchical, object-based image analysis for the classification and dynamic mapping of UK inland Ramsar sites."*
 
 ## Abstract
-Wetlands are critically important ecosystems that are being severely degraded by human activity. This is partly due to the lack of wetland inventories to support conservation, particularly for inland wetlands, as wetlands are dynamic and heterogeneous and therefore challenging to delineate. Object-based and hierarchical classification methods have shown higher accuracy for wetland land cover classification. Despite this, there have been no UK-based studies assessing the suitability of object-based, hierarchical classification methods to wetland land cover classification and dynamic mapping. This study aimed to develop and evaluate such a method for three UK inland Ramsar wetland sites using open source data and software, using the classification outputs for a dynamic land cover map. The overall image classification accuracy for the chosen study sites were 66.8%, 81.0% and 86.9%, with the highest errors of omission for shrub and forest vegetation classes. The dynamic mapping method developed successfully created a map of fuzzy wetland land covers in each study site, highlighting areas of seasonal inundation and vegetation regrowth. The classification would be improved by the development of a segmentation parameter optimisation tool and a greater number and temporal resolution of classified images, alongside more sophisticated pattern recognition algorithms would improve the dynamic map.
+Wetlands are critically important ecosystems that are being severely degraded by human activity. This is partly due to the lack of wetland inventories to support conservation, particularly for inland wetlands, as wetlands are dynamic and heterogeneous and therefore challenging to delineate. Object-based and hierarchical classification methods have shown higher accuracy for wetland land cover classification. Despite this, there have been no UK-based studies assessing the suitability of object-based, hierarchical classification methods to wetland land cover classification and dynamic mapping. This dissertation aimed to develop and evaluate such a method for three UK inland Ramsar wetland sites using open source data and software and producing a dynamic land cover map from the classification outputs. The overall image classification accuracy for the chosen study sites were 66.8%, 81.0% and 86.9%, with the highest errors of omission being for shrub and forest vegetation classes. The dynamic mapping method developed successfully created a map of fuzzy wetland land covers in each study site, highlighting areas of seasonal inundation and vegetation regrowth. The classification would be improved by the development of a segmentation parameter optimisation tool and a greater number and temporal resolution of classified images. More sophisticated pattern recognition algorithms potentially involving error surfaces would improve the dynamic map.
 
-## Data Description
-Sentinel-2A MSI imagery (https://scihub.copernicus.eu/)  
+## Data and Software
+### Satelite Imagery
+Sentinel-2 MSI Level-1C (S2MSI1c) Imagery was used, this can be freely downloaded from https://scihub.copernicus.eu/. This dat aproducts is geometrically and radiometrically corrected and consists of TOA reflectance values. This dissretation used the three visible lighe bands (2-4), four Red Edge bands (5-7 and 8A), NIR band (8) and SWIR bands (11 and 12).
+
+The following table shows the image aquisition dates for each study site used. Images were selected to include a variety of seasons to capture the seasonal variation in wetland vegetation. Images were checked and excluded if there were clouds covering the study area, high contrast shadows or reflectance anomalies.
 
 | Site        |Image Date   |  
 |------------ |------------:|  
@@ -31,6 +34,23 @@ Sentinel-2A MSI imagery (https://scihub.copernicus.eu/)
 |           	| 2020/05/06  |   
 | 	          | 2020/05/29  |   
 |           	| 2020/06/25  |   
+
+### RAMSAR site Shapefile
+A shapefile delineating all Ramsar sites in England was downloaded from the Natural England – DEFRA Open Data Portal (https://naturalengland-defra.opendata.arcgis.com/). 
+
+### Software and Python Packages
+Software: Python and QGIS with the Semi-automatic classification plugin (SCP) installed.
+Packages: GDAL and OGT, NumPy, RIOS, RSGISLib, TuiView, Scikit-learn, Pandas, GeoPandas, EarthPy and Eo-learn.
+
+## Methods
+⋅⋅* Atmospheric Correction using the SCP Dark Object Subtraction algorithm.  
+⋅⋅* Band Ratio Calculations: NDVI, NDWI, NDWI (veg) (Green - NIR/Green + NIR), SWIR ratio (SWIR 1 / SWIR 2), RVI (NIR/Red), NIR-Green Ratio(NIR/Green).  
+⋅⋅* Image Segmentation   
+⋅⋅* 2-step Hierearchical classification.  
+  ⋅⋅* Step 1: a broader classification using thresholds of mean NDWI (> 0.6 is water), mean SWIR ratio (<0.4 was Bare Ground) and mean RVI (< 0.35 is High productivity veg, > 0.35 is low productivity veg) for each segment.  
+  ⋅⋅* Step 2: a finer classification, where water classes were reclassified intro river, lakes and ponds based on segment geometry. (if 0.5 >= length:width >- 1.5, river. if area > 8 ha, lake, else pond). Bare groudn remained as bare ground. A random forest was used to determine forest, shrub and grass vegetation types using ground truth points created using Google Earth Pro. Where a vegetation type coincided with the high prodicvitiy vegetation class from step one, it was considered emergent or managed, where coincided with low productivity class it was considered established.  
+⋅⋅* Accuracy assessments of image classifications were calculated.  
+⋅⋅* All classified images for each study area were stacked into a timeseries. Where different land cover classes were seen over the same pixel in each of the images, a new dynamic class was assigned based on the combination of classes over the timeseries. For example pixels which were classed as water and emergent shrub throughout the timeseries were categorised as seasonally innundated shrublands.  
 
 ## Script Descriptions
 The scripts in this directory do the following:
