@@ -10,27 +10,27 @@ Wetlands are critically important ecosystems that are being severely degraded by
 ## Data Description
 Sentinel-2A MSI imagery (https://scihub.copernicus.eu/)  
 
-| Site	| Image Date|  
-|---: |--- ;|  
-| Malham Tarn	| 2018/06/29|   
-| 	| 2019/02/24|   
-| | 	2019/12/01|   
-| | 2020/04/19|   
-| Bure Marshes| 	2015/09/10|   
-| 	| 2019/12/15|   
-| 	| 2020/02/06|   
-| 	| 2020/03/27|   
-| 	| 2020/04/16|   
-| 	| 2020/04/26|   
-| 	| 2020/06/25|   
+| Site        |Image Date   |  
+|------------ |------------:|  
+| Malham Tarn	| 2018/06/29  |   
+| 	          | 2019/02/24  |   
+|             | 2019/12/01  |   
+|             | 2020/04/19  |   
+| Bure Marshes| 2015/09/10  |   
+| 	          | 2019/12/15  |   
+| 	          | 2020/02/06  |   
+| 	          | 2020/03/27  |   
+| 	          | 2020/04/16  |   
+| 	          | 2020/04/26  |   
+| 	          | 2020/06/25  |   
 | Rutland Water| 	2019/09/19|   
-| 	| 2019/10/02|   
-| 	| 2019/11/18|   
-| 	| 2020/03/27|   
-| 	| 2020/04/19|   
-| 	| 2020/05/06|   
-| 	| 2020/05/29|   
-| 	| 2020/06/25|   
+| 	          | 2019/10/02  |   
+| 	          | 2019/11/18  |   
+| 	          | 2020/03/27  |   
+|           	| 2020/04/19  |   
+|           	| 2020/05/06  |   
+| 	          | 2020/05/29  |   
+|           	| 2020/06/25  |   
 
 ## Script Descriptions
 The scripts in this directory do the following:
