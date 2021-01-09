@@ -39,8 +39,8 @@ The following table shows the image aquisition dates for each study site used. I
 A shapefile delineating all Ramsar sites in England was downloaded from the Natural England – DEFRA Open Data Portal (https://naturalengland-defra.opendata.arcgis.com/). 
 
 ### Software and Python Packages
-Software: Python and QGIS with the Semi-automatic classification plugin (SCP) installed.
-Packages: GDAL and OGT, NumPy, RIOS, RSGISLib, TuiView, Scikit-learn, Pandas, GeoPandas, EarthPy and Eo-learn.
+**Software:** Python and QGIS with the Semi-automatic classification plugin (SCP) installed.  
+**Packages:** GDAL and OGT, NumPy, RIOS, RSGISLib, TuiView, Scikit-learn, Pandas, GeoPandas, EarthPy and Eo-learn.
 
 ## Methods
 * Atmospheric Correction using the SCP Dark Object Subtraction algorithm.  
