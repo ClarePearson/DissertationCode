@@ -43,14 +43,14 @@ Software: Python and QGIS with the Semi-automatic classification plugin (SCP) in
 Packages: GDAL and OGT, NumPy, RIOS, RSGISLib, TuiView, Scikit-learn, Pandas, GeoPandas, EarthPy and Eo-learn.
 
 ## Methods
-⋅⋅* Atmospheric Correction using the SCP Dark Object Subtraction algorithm.  
-⋅⋅* Band Ratio Calculations: NDVI, NDWI, NDWI (veg) (Green - NIR/Green + NIR), SWIR ratio (SWIR 1 / SWIR 2), RVI (NIR/Red), NIR-Green Ratio(NIR/Green).  
-⋅⋅* Image Segmentation   
-⋅⋅* 2-step Hierearchical classification.  
-  ⋅⋅* Step 1: a broader classification using thresholds of mean NDWI (> 0.6 is water), mean SWIR ratio (<0.4 was Bare Ground) and mean RVI (< 0.35 is High productivity veg, > 0.35 is low productivity veg) for each segment.  
-  ⋅⋅* Step 2: a finer classification, where water classes were reclassified intro river, lakes and ponds based on segment geometry. (if 0.5 >= length:width >- 1.5, river. if area > 8 ha, lake, else pond). Bare groudn remained as bare ground. A random forest was used to determine forest, shrub and grass vegetation types using ground truth points created using Google Earth Pro. Where a vegetation type coincided with the high prodicvitiy vegetation class from step one, it was considered emergent or managed, where coincided with low productivity class it was considered established.  
-⋅⋅* Accuracy assessments of image classifications were calculated.  
-⋅⋅* All classified images for each study area were stacked into a timeseries. Where different land cover classes were seen over the same pixel in each of the images, a new dynamic class was assigned based on the combination of classes over the timeseries. For example pixels which were classed as water and emergent shrub throughout the timeseries were categorised as seasonally innundated shrublands.  
+* Atmospheric Correction using the SCP Dark Object Subtraction algorithm.  
+* Band Ratio Calculations: NDVI, NDWI, NDWI (veg) (Green - NIR/Green + NIR), SWIR ratio (SWIR 1 / SWIR 2), RVI (NIR/Red), NIR-Green Ratio(NIR/Green).  
+* Image Segmentation   
+* 2-step Hierearchical classification.  
+  * Step 1: a broader classification using thresholds of mean NDWI (> 0.6 is water), mean SWIR ratio (<0.4 was Bare Ground) and mean RVI (< 0.35 is High productivity veg, > 0.35 is low productivity veg) for each segment.  
+  * Step 2: a finer classification, where water classes were reclassified intro river, lakes and ponds based on segment geometry. (if 0.5 >= length:width >- 1.5, river. if area > 8 ha, lake, else pond). Bare groudn remained as bare ground. A random forest was used to determine forest, shrub and grass vegetation types using ground truth points created using Google Earth Pro. Where a vegetation type coincided with the high prodicvitiy vegetation class from step one, it was considered emergent or managed, where coincided with low productivity class it was considered established.  
+* Accuracy assessments of image classifications were calculated.  
+* All classified images for each study area were stacked into a timeseries. Where different land cover classes were seen over the same pixel in each of the images, a new dynamic class was assigned based on the combination of classes over the timeseries. For example pixels which were classed as water and emergent shrub throughout the timeseries were categorised as seasonally innundated shrublands.  
 
 ## Script Descriptions
 The scripts in this directory do the following:
