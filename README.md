@@ -9,7 +9,7 @@ Wetlands are critically important ecosystems that are being severely degraded by
 
 ## Data and Software
 ### Satelite Imagery
-Sentinel-2 MSI Level-1C (S2MSI1c) Imagery was used, this can be freely downloaded from https://scihub.copernicus.eu/. This data product is geometrically and radiometrically corrected and consists of TOA reflectance values. This dissretation used the three visible lighe bands (2-4), four Red Edge bands (5-7 and 8A), NIR band (8) and SWIR bands (11 and 12).
+Sentinel-2 MSI Level-1C (S2MSI1c) Imagery was used, this can be freely downloaded from https://scihub.copernicus.eu/. This data product is geometrically and radiometrically corrected and consists of TOA reflectance values. This dissertation used the three visible lighe bands (2-4), four Red Edge bands (5-7 and 8A), NIR band (8) and SWIR bands (11 and 12).
 
 The following table shows the image aquisition dates for each study site used. Images were selected to include a variety of seasons to capture the seasonal variation in wetland vegetation. Images were checked and excluded if there were clouds covering the study area, high contrast shadows or reflectance anomalies.
 
@@ -48,13 +48,13 @@ A shapefile delineating all Ramsar sites in England was downloaded from the Natu
 * Image Segmentation   
 * 2-step Hierearchical classification.  
   * Step 1: a broader classification using thresholds of mean NDWI (> 0.6 is water), mean SWIR ratio (<0.4 was Bare Ground) and mean RVI (< 0.35 is High productivity veg, > 0.35 is low productivity veg) for each segment.  
-  * Step 2: a finer classification, where water classes were reclassified intro river, lakes and ponds based on segment geometry. (if 0.5 >= length:width >- 1.5, river. if area > 8 ha, lake, else pond). Bare groudn remained as bare ground. A random forest was used to determine forest, shrub and grass vegetation types using ground truth points created using Google Earth Pro. Where a vegetation type coincided with the high prodicvitiy vegetation class from step one, it was considered emergent or managed, where coincided with low productivity class it was considered established.  
+  * Step 2: a finer classification, where water classes were reclassified intro river, lakes and ponds based on segment geometry. (if 0.5 >= length:width >- 1.5, river. if area > 8 ha, lake, else pond). Bare ground remained as bare ground. A random forest was used to distinguish forest, shrub and grass vegetation types using ground truth points created using Google Earth Pro. Where a vegetation type coincided with the high prodicvitiy vegetation class from step one, it was considered emergent or managed, where it coincided with low productivity class it was considered established.  
 * Accuracy assessments of image classifications were calculated.  
 * All classified images for each study area were stacked into a timeseries. Where different land cover classes were seen over the same pixel in each of the images, a new dynamic class was assigned based on the combination of classes over the timeseries. For example pixels which were classed as water and emergent shrub throughout the timeseries were categorised as seasonally innundated shrublands.  
 
 ## Script Descriptions
 The scripts in this directory do the following:
-1. **preprocessing.py** – reprojects inputted images to British National Grid, creates txt file to be inputted into batch processing QGIS Semi-Automatic Classifictaion plugin (SCP) Dark Object Subtraction (DOS), clips output files of SCP DOS to extent of ramsar shapefile
+1. **preprocessing.py** – reprojected inputted images to British National Grid, creates txt file to be inputted into batch processing QGIS Semi-Automatic Classifictaion plugin (SCP) Dark Object Subtraction (DOS), clips output files of SCP DOS to extent of ramsar shapefile
 2. **gt_process.py** – splits ground truthed points into training and test subset
 3. **obia.py** – iterates through all the clipped image files in the specified directory and:  
   a. Stacks the Image  
